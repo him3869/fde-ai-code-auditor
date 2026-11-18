@@ -1,0 +1,23 @@
+Create two files in the current directory:
+
+1. `review_instructions.txt`:
+Write a clear system prompt instructing an LLM acting as a senior code reviewer and security auditor to analyze submitted code snippets for syntax errors, logical bugs, security vulnerabilities, and performance bottlenecks, and return structured feedback aligned with the requested JSON schema.
+
+2. `main.py`:
+Write a clean, production-ready Python FastAPI application using the official Google GenAI SDK (`google-genai`), `pydantic`, `fastapi`, and `python-dotenv`.
+
+Requirements for `main.py`:
+- Load environment variables with `load_dotenv()` and read `GEMINI_API_KEY` from the environment (returning a clear error if missing).
+- Read the system prompt dynamically from `review_instructions.txt` at request time or startup (with a sensible fallback string if the file is missing) so editing `review_instructions.txt` updates review behavior without modifying `main.py`.
+- Define a Pydantic request model `CodeReviewRequest` with:
+  - `code: str`
+  - `language: str = "python"`
+- Define a Pydantic response model `CodeReviewResponse` with:
+  - `is_safe: bool`
+  - `bugs_found: list[str]`
+  - `optimization_suggestions: list[str]`
+  - `refactored_code: str`
+- Add a `GET /` health-check endpoint returning `{"status": "running"}`.
+- Add a `POST /review-code` endpoint that accepts `CodeReviewRequest`, calls the Gemini API via `genai.Client()` using a fast current Gemini model (such as `gemini-2.5-flash`) with structured JSON output matching `CodeReviewResponse`, and returns the parsed `CodeReviewResponse`.
+- Wrap API calls in `try/except` blocks and raise clean HTTP exceptions (`HTTPException`) on errors instead of crashing the server.
+- Include a `requirements.txt` file listing the required packages (`fastapi`, `uvicorn[standard]`, `pydantic`, `python-dotenv`, `google-genai`).

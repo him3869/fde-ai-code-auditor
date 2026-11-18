@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDE AI Code Reviewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+    <div class="max-w-6xl mx-auto p-6">
+        <header class="mb-8 border-b border-slate-800 pb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-400">FDE AI Code Reviewer & Security Auditor</h1>
+                <p class="text-sm text-slate-400">Powered by FastAPI & Gemini</p>
+            </div>
+            <span class="px-3 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full text-xs font-medium">System Ready</span>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Column: Code Input -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-sm font-semibold text-slate-300">Source Code</label>
+                    <select id="language" class="bg-slate-800 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="c">C</option>
+                        <option value="cpp">C++</option>
+                        <option value="java">Java</option>
+                        <option value="go">Go</option>
+                    </select>
+                </div>
+                <textarea id="codeInput" rows="16" placeholder="Paste your code snippet here..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-4 font-mono text-sm text-slate-200 focus:outline-none focus:border-indigo-500 flex-grow">def calculate_average(numbers):
+    total = sum(numbers)
+    avg = total / len(numbers)
+    return avg
+
+print(calculate_average([]))</textarea>
+                <button id="reviewBtn" onclick="submitCode()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2">
+                    <span>Analyze & Audit Code</span>
+                </button>
+            </div>
+
+            <!-- Right Column: Audit Results -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
+                <h2 class="text-sm font-semibold text-slate-300 mb-3">Audit Report</h2>
+                
+                <div id="loading" class="hidden flex-grow flex items-center justify-center text-slate-400">
+                    <div class="animate-pulse">Analyzing AST, security vulnerabilities, and logic...</div>
+                </div>
+
+                <div id="placeholder" class="flex-grow flex items-center justify-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-lg p-6 text-center">
+                    Click "Analyze & Audit Code" to run the AI security & bug check.
+                </div>
+
+                <div id="results" class="hidden space-y-4 overflow-y-auto max-h-[550px] pr-1">
+                    <!-- Safety Badge -->
+                    <div id="safetyBadge" class="p-3 rounded-lg border text-sm font-semibold"></div>
+
+                    <!-- Bugs Found -->
+                    <div>
+                        <h3 class="text-xs uppercase tracking-wider text-rose-400 font-bold mb-1.5">Bugs & Vulnerabilities</h3>
+                        <ul id="bugsList" class="list-disc list-inside text-sm text-slate-300 space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-800"></ul>
+                    </div>
+
+                    <!-- Optimizations -->
+                    <div>
+                        <h3 class="text-xs uppercase tracking-wider text-amber-400 font-bold mb-1.5">Optimization Suggestions</h3>
+                        <ul id="optList" class="list-disc list-inside text-sm text-slate-300 space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-800"></ul>
+                    </div>
+
+                    <!-- Refactored Code -->
+                    <div>
+                        <h3 class="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1.5">Refactored Production Code</h3>
+                        <pre id="refactoredCode" class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function submitCode() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            const btn = document.getElementById('reviewBtn');
+            
+            document.getElementById('placeholder').classList.add('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            try {
+                const response = await fetch('/review-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, language })
+                });
+                
+                if (!response.ok) throw new Error('API Error');
+                const data = await response.json();
+
+                // Update Safety Badge
+                const badge = document.getElementById('safetyBadge');
+                if (data.is_safe) {
+                    badge.className = "p-3 rounded-lg border border-emerald-800 bg-emerald-950/60 text-emerald-300 text-sm font-semibold";
+                    badge.textContent = "✅ Safe to Deploy: No critical security vulnerabilities detected.";
+                } else {
+                    badge.className = "p-3 rounded-lg border border-rose-800 bg-rose-950/60 text-rose-300 text-sm font-semibold";
+                    badge.textContent = "⚠️ Action Required: Security flaws or critical bugs found.";
+                }
+
+                // Populate Bugs
+                const bugsList = document.getElementById('bugsList');
+                bugsList.innerHTML = data.bugs_found.length 
+                    ? data.bugs_found.map(b => `<li>${b}</li>`).join('') 
+                    : '<li class="text-slate-500 list-none">No bugs found.</li>';
+
+                // Populate Optimizations
+                const optList = document.getElementById('optList');
+                optList.innerHTML = data.optimization_suggestions.length 
+                    ? data.optimization_suggestions.map(o => `<li>${o}</li>`).join('') 
+                    : '<li class="text-slate-500 list-none">Code looks optimal.</li>';
+
+                // Refactored Code
+                document.getElementById('refactoredCode').textContent = data.refactored_code;
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('results').classList.remove('hidden');
+            } catch (err) {
+                alert("Error analyzing code. Check your terminal logs.");
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('placeholder').classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>
